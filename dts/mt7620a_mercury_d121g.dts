@@ -9,8 +9,9 @@
  *   U-Boot   : stock Ralink/Realtek-SDK 1.1.3, serial console 57600 8N1
  *
  * WiFi calibration (from the ORIGINAL 2MB dump, verified byte-exact):
- *   0xF800  2.4G EEPROM, 0x200 bytes  (MT7620, MAC at +0x4 = 00:0c:43:76:20:58)
- *   0xFC00  5G   EEPROM, 0x200 bytes  (MT7612, MAC at +0x4 = 00:0c:43:47:c2:80)
+ *   0xF800  2.4G EEPROM, 0x200 bytes  (MT7620; MAC stored at +0x4)
+ *   0xFC00  5G   EEPROM, 0x200 bytes  (MT7612; MAC stored at +0x4)
+ * Per-unit MAC values are intentionally omitted here.
  * These sit inside the first 64KB of flash, right after U-Boot, so the
  * partition layout below mirrors that reality instead of the usual
  * "factory at 0x40000" convention.
