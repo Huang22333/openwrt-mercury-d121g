@@ -1,0 +1,19 @@
+--- a/target/linux/ramips/image/mt7620.mk
++++ b/target/linux/ramips/image/mt7620.mk
+@@ -1634,3 +1634,16 @@
+   SUPPORTED_DEVICES += kng_rc
+ endef
+ TARGET_DEVICES += zyxel_keenetic-viva
++
++define Device/mercury_d121g
++  SOC := mt7620a
++  IMAGE_SIZE := 16256k
++  DEVICE_VENDOR := MERCURY
++  DEVICE_MODEL := D121G
++  DEVICE_PACKAGES := kmod-mt76x2 kmod-usb2 kmod-usb-ohci kmod-switch-rtl8367b
++  SUPPORTED_DEVICES += d121g
++  IMAGES += initramfs-kernel.bin
++  KERNEL := kernel-bin | append-dtb | relocate-kernel 0x80000000 | lzma | uImage lzma
++  KERNEL_INITRAMFS := kernel-bin | append-dtb | relocate-kernel 0x80000000 | lzma | uImage lzma
++endef
++TARGET_DEVICES += mercury_d121g

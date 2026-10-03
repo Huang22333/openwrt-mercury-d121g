@@ -1,0 +1,27 @@
+--- a/target/linux/ramips/mt7620/base-files/etc/board.d/02_network
++++ b/target/linux/ramips/mt7620/base-files/etc/board.d/02_network
+@@ -237,6 +237,16 @@
+ 		ucidef_add_switch "switch0" \
+ 			"1:lan:3" "2:lan:4" "3:lan:1" "4:lan:2" "0:wan" "6@eth0"
+ 		;;
++	mercury,d121g)
++		# 3x Gigabit via RTL8367S (extif1 = CPU port 7).
++		# 实测确认（swconfig dev switch1 show + 丝印）:
++		#   port 4 = WAN, port 3 = LAN1, port 2 = LAN2, port 7 = CPU(tag)
++		# 即 C5v4 去掉 port 0/1 —— 同一套参考设计。
++		ucidef_add_switch "switch0"
++		ucidef_add_switch_attr "switch0" "enable" "0"
++		ucidef_add_switch "switch1" \
++			"2:lan:2" "3:lan:1" "4:wan" "7@eth0"
++		;;
+ 	tplink,archer-c5-v4)
+ 		ucidef_add_switch "switch0"
+ 		ucidef_add_switch_attr "switch0" "enable" "0"
+@@ -435,6 +445,7 @@
+ 	tplink,ec220-g5-v2)
+ 		wan_mac=$(macaddr_add "$(mtd_get_mac_binary rom 0xf100)" 1)
+ 		;;
++	mercury,d121g|\
+ 	wavlink,wl-wn531g3|\
+ 	wavlink,wl-wn531g3-a2|\
+ 	zbtlink,zbt-we1026-5g-16m)
