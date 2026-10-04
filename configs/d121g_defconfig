@@ -1,0 +1,42 @@
+#
+# OpenWrt 配置种子（Mercury D121G）
+#
+# 用法：
+#   cp configs/d121g_defconfig openwrt/.config
+#   cd openwrt && make defconfig     # ← 关键：这一步会把默认值补全
+#
+# 这是 **精简种子**，不是完整 .config。`make defconfig` 会按本 profile 的默认值
+# 把其余选项补齐，所以它比一份 7000 行的完整 config 更好维护、也更容易跟着
+# OpenWrt 小版本走。
+#
+# 想加软件包：在下面追加 `CONFIG_PACKAGE_xxx=y` 再 `make defconfig` 即可。
+#
+
+# ---- 目标平台 ----
+CONFIG_TARGET_ramips=y
+CONFIG_TARGET_ramips_mt7620=y
+CONFIG_TARGET_ramips_mt7620_DEVICE_mercury_d121g=y
+
+# ---- 镜像格式 ----
+# squashfs-sysupgrade：持久化系统（系统内 sysupgrade 用）
+# initramfs：纯内存运行，用来验证"能不能启动"而不写 flash
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_INITRAMFS=y
+
+# ---- 带 Web 界面 ----
+# 不想要 LuCI 就注释掉这行，镜像能小 3~4MB、overlay 也能更大
+CONFIG_PACKAGE_luci=y
+
+# ---- 中文界面（可选）----
+# 联网状态下装最省事：
+#   opkg update && opkg install luci-i18n-base-zh-cn
+# 想直接编进镜像，取消下面两行注释（注意 LUCI_LANG 那行是必需的开关）：
+# CONFIG_LUCI_LANG_zh_Hans=y
+# CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+# CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+# CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn=y
+
+# ---- 便于调试（可选）----
+# CONFIG_PACKAGE_openssh-sftp-server=y   # scp/sftp 传文件
+# CONFIG_PACKAGE_htop=y
+# CONFIG_PACKAGE_nano=y

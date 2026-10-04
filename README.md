@@ -73,20 +73,42 @@ KERNEL := kernel-bin | append-dtb | relocate-kernel 0x80000000 | lzma | uImage l
 ## 三、仓库结构
 
 ```
-dts/      mt7620a_mercury_d121g.dts       设备树（分区 / 网口 / WiFi 校准绑定）
-patches/  0001-mt7620.mk-*.patch          设备定义（含 relocate-kernel）
-          0002-config-6.6-*.patch         开启 CONFIG_MTD_SPLIT_LZMA_FW
-          0003-02_network-*.patch         网口角色映射
-tools/    make_tftp_reloc.py              打包成原厂 U-Boot 能引导的镜像（带自校验）
-          verify_layout.py                在 PC 上模拟内核的 mtd 分区发现流程
-docs/     root-cause.md                   根因分析与证据
-          uboot-patch.md                  原厂 U-Boot 的 1 字节补丁（含推导方法）
-          flash-layout.md                 最终的 flash 布局
+configs/  d121g_defconfig                编译配置种子（fork 后改这个就行）
+dts/      mt7620a_mercury_d121g.dts      设备树（分区 / 网口 / WiFi 校准绑定）
+patches/  0001-mt7620.mk-*.patch         设备定义（含 relocate-kernel）
+          0002-config-6.6-*.patch        开启 CONFIG_MTD_SPLIT_LZMA_FW
+          0003-02_network-*.patch        网口角色映射
+tools/    make_tftp_reloc.py             打包成原厂 U-Boot 能引导的镜像（带自校验）
+          verify_layout.py               在 PC 上模拟内核的 mtd 分区发现流程
+docs/     root-cause.md                  根因分析与证据
+          uboot-patch.md                 原厂 U-Boot 的 1 字节补丁（含推导方法）
+          flash-layout.md                最终的 flash 布局
+.github/  workflows/build.yml            GitHub Actions 在线编译
 ```
 
 ---
 
 ## 四、编译
+
+### 方式 A：在线编译（推荐，不用装任何环境）
+
+**不需要本地 Linux，也不需要会 OpenWrt 编译。** 流程：
+
+1. 点右上角 **Fork**，把这个仓库复制到你自己的账号下
+2. 按需改 `configs/d121g_defconfig`（加软件包、开中文界面等，见文件内注释）
+   改完直接 commit 到自己的 `main` 分支
+3. 进自己仓库的 **Actions** 页 → 左侧选 **Build OpenWrt for Mercury D121G**
+   → 右侧 **Run workflow** → 绿色按钮
+4. 等约 **2~4 小时**（GitHub 的 6 小时 job 上限内）
+5. 编译完在该次运行的页面底部 **Artifacts** 里下载
+   `openwrt-mercury_d121g`（一个 zip，含 `.bin`、`.manifest`、`sha256sums`）
+
+> 改 `configs/**`、`patches/**`、`dts/**` 会自动触发编译，不用手动点。
+>
+> Artifact 保留 30 天，记得下载下来。产物是**原始编译结果**，
+> 要刷进机器还需用 `tools/make_tftp_reloc.py` 转换（见第五节）。
+
+### 方式 B：本地编译
 
 基于 **OpenWrt v24.10.2 (r28739)**、Linux 6.6.93、`ramips/mt7620`。
 
@@ -96,20 +118,18 @@ cd openwrt
 ./scripts/feeds update -a && ./scripts/feeds install -a
 ```
 
-打补丁 + 放设备树：
+打补丁 + 放设备树 + 应用配置：
 
 ```sh
 for p in /path/to/repo/patches/*.patch; do patch -p1 < "$p"; done
 cp /path/to/repo/dts/mt7620a_mercury_d121g.dts target/linux/ramips/dts/
+cp /path/to/repo/configs/d121g_defconfig .config
+make defconfig          # ← 必需：把默认值补全
 ```
 
-配置并编译：
+然后编译：
 
 ```sh
-make menuconfig
-#   Target System  -> Ralink/MediaTek MIPS (ramips)
-#   Subtarget      -> MT7620 based boards
-#   Target Profile -> MERCURY D121G
 make -j$(nproc)
 ```
 
