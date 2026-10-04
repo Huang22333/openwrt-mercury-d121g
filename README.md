@@ -7,6 +7,24 @@ MT7620DA + RTL8367S + MT7612EN 的第三方 OpenWrt 移植，**已在真机上�
 
 ---
 
+## 🚀 只想刷机？看这里
+
+**不会编程也能完成。** 全程不需要串口线、不需要 TFTP、不需要碰 U-Boot 菜单。
+
+👉 **[docs/刷机指南-零基础.md](docs/刷机指南-零基础.md)** ← 从零开始，照着做约 1.5 小时
+
+大概流程：
+
+1. 用编程器读原厂 2MB flash → 备份（**这步最关键，别跳**）
+2. 在 GitHub 上点几下，让云端帮你编译固件（约 40~60 分钟）
+3. 跑一个 Python 脚本，把你的原厂数据和新固件拼成 16MB 整片
+4. 把整片写进新的 W25Q128，焊上去，开机
+
+> 本仓库**不提供**任何人已经编译好的固件包 —— 因为固件里含**每台机器独有**的
+> MAC 地址和 WiFi 校准数据，必须由你自己的原厂备份生成。仓库给的是工具和流程。
+
+---
+
 ## 一、设备规格（实测）
 
 | 项目 | 规格 |
@@ -78,9 +96,11 @@ dts/      mt7620a_mercury_d121g.dts      设备树（分区 / 网口 / WiFi 校�
 patches/  0001-mt7620.mk-*.patch         设备定义（含 relocate-kernel）
           0002-config-6.6-*.patch        开启 CONFIG_MTD_SPLIT_LZMA_FW
           0003-02_network-*.patch        网口角色映射
-tools/    make_tftp_reloc.py             打包成原厂 U-Boot 能引导的镜像（带自校验）
+tools/    make_full_flash.py             ★一键生成 16MB 整片（零基础用这个，单文件）
+          make_tftp_reloc.py             打包成原厂 U-Boot 能引导的镜像（进阶）
           verify_layout.py               在 PC 上模拟内核的 mtd 分区发现流程
-docs/     root-cause.md                  根因分析与证据
+docs/     刷机指南-零基础.md              ★完整刷机教程（含编程器、焊接、排错）
+          root-cause.md                  根因分析与证据
           uboot-patch.md                 原厂 U-Boot 的 1 字节补丁（含推导方法）
           flash-layout.md                最终的 flash 布局
 .github/  workflows/build.yml            GitHub Actions 在线编译
@@ -144,40 +164,27 @@ make -j$(nproc)
 
 ## 五、刷机
 
-### 0. 先备份
+**完整步骤（含编程器操作、焊接、排错）请看 [docs/刷机指南-零基础.md](docs/刷机指南-零基础.md)。**
 
-换 flash 之前，**务必先用编程器（CH341A）把原厂 2MB 片完整读出来备份**，
-里面的 `factory`（WiFi 校准 + MAC）是**每台唯一**的，丢了 WiFi 就废了。
+最简形式：
 
-### 1. 解除 U-Boot 的 2MB 大小限制（1 字节）
+```sh
+# 1. 用「你从自己设备读出的原厂 2MB 备份」+「编译产物」拼出 16MB 整片
+python3 tools/make_full_flash.py stock.bin \
+        openwrt-ramips-mt7620-mercury_d121g-squashfs-sysupgrade.bin
 
-原厂 U-Boot 硬编码认为 flash 只有 2MB，导致任何大于 1.92MB 的镜像写入时被拒
-（`Abort: bootloader size %d too big!`）。改 1 个字节即可：
-
+# 2. 用编程器把生成的 d121g_full_16m.bin 写进新的 W25Q128，校验，焊上，开机
+#    浏览器打开 http://192.168.1.1
 ```
-偏移 0x2338:  0x1e  →  0xfe      (lui v0,0x1e → lui v0,0xfe)
-```
 
-推导方法与校验方式见 [`docs/uboot-patch.md`](docs/uboot-patch.md)。
-**该偏移与原厂 U-Boot 版本绑定**，不同版本必须重新推导。
+> 为什么必须先有原厂备份：固件里含**每台机器独有**的 MAC 和 WiFi 校准数据。
+> 工具会把你的校准原样保留、并顺手给 U-Boot 打上解除 2MB 限制的 1 字节补丁。
 
-### 2. U-Boot 菜单刷入
+**以后的升级**不需要再拆机 —— 系统内用**编译出来的原始** `...sysupgrade.bin`
+（不是 `d121g_full_16m.bin`）：
 
-1. Tftpd64 目录设成镜像所在目录，PC 网卡设 `192.168.1.5/24`
-2. 上电，看到 `press ctrl + c to stop auto boot` 时按 **Ctrl+C**
-3. 输 `9` 刷 bootloader（写入 flash `0x0`），再输 `2` 刷固件（写入 flash `0x15000`）
-4. 或者直接用 `tools/make_tftp_reloc.py` 生成的文件走 option 2
-
-### 3. 之后的升级
-
-`tools/make_tftp_reloc.py` 生成的镜像**同时**是系统内 `sysupgrade` 能吃的格式
-（mt7620 的 `PART_NAME=firmware`、`platform_check_image()` 恒返回 0、元数据齐全）：
-
-```
-# LuCI: System -> Backup / Flash Firmware
-# 或
-sysupgrade -n /tmp/tftp_ow_sysup.bin
-```
+- LuCI: System → Backup / Flash Firmware → Flash image
+- 或 `sysupgrade -n /tmp/...sysupgrade.bin`
 
 ---
 
